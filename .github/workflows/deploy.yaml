@@ -25,13 +25,11 @@ jobs:
       - name: Build Docker image
         run: |
           docker build \
-          --build-arg BUILD_ENV_FILE=do.build.env \
-          --build-arg PROD_ENV_FILE=do.prod.env \
-          -t registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }} . -f ./Dockerfile
+          -t registry.digitalocean.com/hcode/brclick-projeto:${{ github.sha }} . -f ./Dockerfile
 
       - name: Push Docker image
         run: |
-          docker push registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}
+          docker push registry.digitalocean.com/hcode/brclick-projeto:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -62,7 +60,7 @@ jobs:
           doctl kubernetes cluster kubeconfig save ${{ vars.K8S_CLUSTER_ID }}
 
       - name: Update deployment file
-        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}|' $GITHUB_WORKSPACE/k8s/deployment.yaml
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/hcode/brclick-projeto:${{ github.sha }}|' $GITHUB_WORKSPACE/k8s/deployment.yaml
 
       - name: Apply Kubernetes deployment
         run: kubectl apply -f k8s/deployment.yaml
@@ -89,7 +87,7 @@ jobs:
 
       - name: Delete manifests
         run: |
-          MANIFESTS_JSON=$(doctl registry repository list-manifests ${{ vars.CONTAINER_NAME_WEBSITE }} --output json)
+          MANIFESTS_JSON=$(doctl registry repository list-manifests brclick-projeto --output json)
           if [ -z "$MANIFESTS_JSON" ]; then
             echo "No manifests found"
             exit 0
@@ -108,6 +106,6 @@ jobs:
 
           for digest in "${MANIFESTS_ARRAY[@]}"; do
             digest=$(echo $digest | tr -d '\r')
-            echo "Deleting manifest with digest: ${{ vars.CONTAINER_NAME_WEBSITE }} $digest"
-            doctl registry repository delete-manifest ${{ vars.CONTAINER_NAME_WEBSITE }} $digest --force --verbose
+            echo "Deleting manifest with digest: brclick-projeto $digest"
+            doctl registry repository delete-manifest brclick-projeto $digest --force --verbose
           done
