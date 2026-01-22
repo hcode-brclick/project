@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: brclick-projeto-service
+  namespace: hcode
+  labels:
+    app: brclick-projeto-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: brclick-projeto-service
+  strategy:
+    rollingUpdate:
+      maxSurge: 5
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: brclick-projeto-service
+    spec:
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - brclick-projeto-service
+                topologyKey: kubernetes.io/hostname
+      containers:
+        - name: brclick-projeto-service
+          image: <IMAGE>
+          resources:
+            limits:
+              cpu: 150m
+              memory: 1024Mi
+            requests:
+              cpu: 50m
+              memory: 512Mi
+          ports:
+            - containerPort: 3000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: brclick-projeto-service-service
+  namespace: hcode
+spec:
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 3000
+  selector:
+    app: brclick-projeto-service

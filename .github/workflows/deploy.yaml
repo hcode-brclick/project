@@ -1,0 +1,113 @@
+name: Build Website
+
+on:
+  push:
+    branches:
+      - production-frontend
+
+env:
+  APP: frontend
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to DigitalOcean Container Registry
+        env:
+          DO_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: |
+          echo $DO_ACCESS_TOKEN | docker login --username doctl --password-stdin registry.digitalocean.com
+
+      - name: Build Docker image
+        run: |
+          docker build \
+          --build-arg BUILD_ENV_FILE=do.build.env \
+          --build-arg PROD_ENV_FILE=do.prod.env \
+          -t registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }} ./${{env.APP}} -f ./${{env.APP}}/Dockerfile
+
+      - name: Push Docker image
+        run: |
+          docker push registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    permissions: write-all
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v1
+        with:
+          version: 'latest'
+
+      - name: Install doctl
+        run: sudo snap install doctl --classic
+
+      - name: Log in to doctl
+        env:
+          DO_ACCESS_TOKEN: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+        run: doctl auth init -t $DO_ACCESS_TOKEN
+
+      - name: Save Kubeconfig
+        run: |
+          mkdir -p /home/runner/.kube
+          sudo snap connect doctl:kube-config
+          doctl kubernetes cluster kubeconfig save ${{ vars.K8S_CLUSTER_ID }}
+
+      - name: Update deployment file
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}|' $GITHUB_WORKSPACE/${{env.APP}}/k8s/deployment.yaml
+
+      - name: Apply Kubernetes deployment
+        run: kubectl apply -f ${{env.APP}}/k8s/deployment.yaml
+
+  clearImages:
+    permissions:
+      actions: read
+      contents: read
+      id-token: write
+    runs-on: ubuntu-latest
+    needs:
+      - deploy
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install doctl
+        run: sudo snap install doctl --classic
+
+      - name: DigitalOcean login
+        run: doctl auth init -t ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Delete manifests
+        run: |
+          MANIFESTS_JSON=$(doctl registry repository list-manifests ${{ vars.CONTAINER_NAME_WEBSITE }} --output json)
+          if [ -z "$MANIFESTS_JSON" ]; then
+            echo "No manifests found"
+            exit 0
+          fi
+
+          if ! command -v jq &> /dev/null; then
+            echo "jq is not installed. Please install jq to proceed."
+            exit 1
+          fi
+
+          MANIFESTS_ARRAY=($(echo "$MANIFESTS_JSON" | jq -r --arg SHA "${{ github.sha }}" '.[] | select(.tags | index($SHA) | not) | .digest'))
+          if [ ${#MANIFESTS_ARRAY[@]} -eq 0 ]; then
+            echo "No manifests to delete"
+            exit 0
+          fi
+
+          for digest in "${MANIFESTS_ARRAY[@]}"; do
+            digest=$(echo $digest | tr -d '\r')
+            echo "Deleting manifest with digest: ${{ vars.CONTAINER_NAME_WEBSITE }} $digest"
+            doctl registry repository delete-manifest ${{ vars.CONTAINER_NAME_WEBSITE }} $digest --force --verbose
+          done
