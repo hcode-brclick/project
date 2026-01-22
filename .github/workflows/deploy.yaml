@@ -57,7 +57,8 @@ jobs:
         run: |
           mkdir -p /home/runner/.kube
           sudo snap connect doctl:kube-config
-          doctl kubernetes cluster kubeconfig save ${{ vars.K8S_CLUSTER_ID }}
+          doctl kubernetes cluster kubeconfig save 05c7d4fa-4bc2-4dbf-80b6-757ecec43bff
+
 
       - name: Update deployment file
         run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/hcode/brclick-projeto:${{ github.sha }}|' $GITHUB_WORKSPACE/k8s/deployment.yaml
