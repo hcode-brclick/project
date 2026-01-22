@@ -7,7 +7,7 @@
     "dev": "next dev",
     "lint": "eslint .",
     "start": "next start",
-     "prod": "node ../scripts/prod"
+     "prod": "node ./scripts/prod"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
