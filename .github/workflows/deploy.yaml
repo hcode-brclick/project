@@ -27,7 +27,7 @@ jobs:
           docker build \
           --build-arg BUILD_ENV_FILE=do.build.env \
           --build-arg PROD_ENV_FILE=do.prod.env \
-          -t registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }} ./${{env.APP}} -f ./${{env.APP}}/Dockerfile
+          -t registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }} . -f ./Dockerfile
 
       - name: Push Docker image
         run: |
@@ -62,10 +62,10 @@ jobs:
           doctl kubernetes cluster kubeconfig save ${{ vars.K8S_CLUSTER_ID }}
 
       - name: Update deployment file
-        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}|' $GITHUB_WORKSPACE/${{env.APP}}/k8s/deployment.yaml
+        run: TAG=$(echo $GITHUB_SHA | head -c7) && sed -i 's|<IMAGE>|registry.digitalocean.com/${{ vars.REGISTRY }}/${{ vars.CONTAINER_NAME_WEBSITE }}:${{ github.sha }}|' $GITHUB_WORKSPACE/k8s/deployment.yaml
 
       - name: Apply Kubernetes deployment
-        run: kubectl apply -f ${{env.APP}}/k8s/deployment.yaml
+        run: kubectl apply -f k8s/deployment.yaml
 
   clearImages:
     permissions:
