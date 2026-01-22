@@ -97,8 +97,8 @@ export default function EmConstrucaoPage() {
         </h1>
 
         <p className="text-lg text-muted-foreground mb-4 max-w-md mx-auto leading-relaxed">
-          Estamos trabalhando duro para trazer algo incrivel para voce. Esta
-          pagina estara disponivel em breve!
+          Estamos trabalhando duro para trazer algo incrível para você. Esta
+          página estará disponível em breve!
         </p>
 
         {/* BrClick Course Description */}
