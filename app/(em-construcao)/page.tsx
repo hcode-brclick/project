@@ -104,10 +104,10 @@ export default function EmConstrucaoPage() {
         {/* BrClick Course Description */}
         <div className="bg-card border border-border rounded-2xl p-6 mb-8 max-w-lg mx-auto">
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Este projeto esta sendo desenvolvido como parte do{" "}
+            Este projeto está sendo desenvolvido como parte do{" "}
             <span className="font-semibold text-foreground">curso BrClick</span>, 
             uma plataforma de ensino focada em desenvolvimento web moderno. 
-            Acompanhe nosso progresso e aprenda a criar aplicacoes incriveis!
+            Acompanhe nosso progresso e aprenda a criar aplicações incríveis!
           </p>
         </div>
 
